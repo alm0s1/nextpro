@@ -9,6 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
+<script>
+/* ضع رابط نشر Convex هنا بعد إنشائه (مثل https://اسم-المشروع.convex.cloud). اتركه فارغاً لوضع التجربة بدون قاعدة بيانات. */
+window.NEXTPRO_CONVEX_URL=window.NEXTPRO_CONVEX_URL||"https://curious-okapi-694.ap-southeast-2.convex.cloud";
+</script>
 <style>
 :root{
   --ink:#0B2049; --ink-deep:#071738; --ink2:#17306A; --paper:#F5F7FB; --white:#fff; --mist:#E7ECF5; --tint:#EEF2F9; --line:#D3DBE8;
@@ -758,13 +762,15 @@ html.adm-open{overflow:hidden}
             <select id="interest" name="interest"></select></div>
           <div class="f full"><label for="msg"><span data-l="ar">تفاصيل الاحتياج</span><span data-l="en">Details of the need</span></label>
             <textarea id="msg" name="msg" data-ph-ar="عدد المتدربين، المدة المتوقعة، أي ملاحظات" data-ph-en="Number of trainees, expected duration, any notes" placeholder="عدد المتدربين، المدة المتوقعة، أي ملاحظات"></textarea></div>
+          <div class="f full" style="position:absolute;inset-inline-start:-9999px;height:0;overflow:hidden" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+          <p class="field-err full" id="form-err" role="alert" hidden style="grid-column:1/-1"></p>
           <div class="f full"><button class="btn btn-gold" type="submit" id="send"><span class="btn-label"><span data-l="ar">أرسل الطلب</span><span data-l="en">Send request</span></span><span class="btn-busy"><span data-l="ar">جارٍ الإرسال...</span><span data-l="en">Sending...</span></span></button></div>
           <p class="legal"><span data-l="ar">نستخدم بياناتك للرد على طلبك فقط.</span><span data-l="en">We use your details only to reply to your request.</span></p>
         </div>
         <div class="sent" id="sent" role="status" tabindex="-1" hidden>
           <div class="ok"><svg class="ico" style="width:28px;height:28px" aria-hidden="true"><use href="#i-check"/></svg></div>
           <h3><span data-l="ar">وصلنا طلبك</span><span data-l="en">We received your request</span></h3>
-          <p><span data-l="ar">هذا نموذج تجريبي: حُفظ الطلب في متصفحك فقط ويظهر في لوحة الإدارة. عند الربط بالموقع الفعلي يصل الطلب إلى فريق NextPro، ونرد خلال 24 ساعة.</span><span data-l="en">This is a prototype: the request was saved in your browser only and shows in the staff dashboard. Once connected to the live site, it reaches the NextPro team and we reply within 24 hours.</span></p>
+          <p id="sentMsg"><span data-l="ar">هذا نموذج تجريبي: حُفظ الطلب في متصفحك فقط ويظهر في لوحة الإدارة. عند الربط بالموقع الفعلي يصل الطلب إلى فريق NextPro، ونرد خلال 24 ساعة.</span><span data-l="en">This is a prototype: the request was saved in your browser only and shows in the staff dashboard. Once connected to the live site, it reaches the NextPro team and we reply within 24 hours.</span></p>
           <button class="btn btn-line" type="button" id="again"><span data-l="ar">إرسال طلب آخر</span><span data-l="en">Send another request</span></button>
         </div>
       </form>
@@ -968,14 +974,19 @@ html.adm-open{overflow:hidden}
   var vids=$('#vids');
   var escH=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   window.NP_renderVids=function(){
-    var VIDEOS=(window.NPStore&&window.NPStore.published())||window.NEXTPRO_VIDEOS||[]; /* [{yt,ar,en}] */
+    var LIVE_=!!window.NEXTPRO_CONVEX_URL;
+    var src=window.NPStore?window.NPStore.published():(window.NEXTPRO_VIDEOS||[]);
+    Promise.resolve(src).then(function(list){drawVids(list||[],LIVE_)},function(){drawVids([],LIVE_)});
+  };
+  function drawVids(VIDEOS,LIVE_){ /* [{yt,ar,en}] */
+    var sec=document.getElementById('video');if(sec)sec.hidden=LIVE_&&!VIDEOS.length;
     vids.innerHTML=VIDEOS.length?VIDEOS.map(function(v){
       return '<div class="vid"><button type="button" class="yt" data-yt="'+v.yt+'" aria-label="'+escH(v.ar)+'">'+
         '<img src="https://i.ytimg.com/vi/'+v.yt+'/hqdefault.jpg" alt="" loading="lazy" width="480" height="360" onerror="this.remove()">'+
         '<span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>'+
         '<h3>'+L(escH(v.ar),escH(v.en||v.ar))+'</h3></div>';
     }).join(''):'<div class="vid-empty">'+L('يظهر هنا الفيديو الذي تضيفه الإدارة من لوحة التحكم.','Videos added by the team from the dashboard appear here.')+'</div>';
-  };
+  }
   window.NP_renderVids();
   vids.addEventListener('click',function(e){
     var b=e.target.closest('.yt');if(!b||!b.dataset.yt)return;
@@ -1052,13 +1063,20 @@ html.adm-open{overflow:hidden}
     touched=true;
     var first=null;checks.forEach(function(i){if(!validateOne(i)&&!first)first=i});
     if(first){first.focus();return}
-    var btn=$('#send');btn.setAttribute('aria-busy','true');btn.disabled=true;
-    if(window.NPStore)window.NPStore.addRequest({name:$('#name').value.trim(),org:$('#org').value.trim(),phone:$('#phone').value.trim(),email:$('#email').value.trim(),interest:$('#interest').value,message:$('#msg').value.trim()});
-    setTimeout(function(){
+    var btn=$('#send'),ferr=$('#form-err');ferr.hidden=true;btn.setAttribute('aria-busy','true');btn.disabled=true;
+    var sent=window.NPStore?window.NPStore.addRequest({name:$('#name').value.trim(),org:$('#org').value.trim(),phone:$('#phone').value.trim(),email:$('#email').value.trim(),interest:$('#interest').value,message:$('#msg').value.trim(),website:($('#website')||{}).value||''}):Promise.resolve();
+    var wait=new Promise(function(r){setTimeout(r,500)});
+    Promise.all([sent,wait]).then(function(){
       btn.removeAttribute('aria-busy');btn.disabled=false;
       $('#fgrid').hidden=true;var s=$('#sent');s.hidden=false;s.focus();
-    },700);
+    },function(err){
+      btn.removeAttribute('aria-busy');btn.disabled=false;
+      var fast=/too_fast/.test(String(err&&err.message));
+      ferr.innerHTML='<svg class="ico" style="width:18px;height:18px" aria-hidden="true"><use href="#i-alert"/></svg><span>'+(fast?(lang==='ar'?'أرسلت طلباً قبل لحظات. انتظر دقيقة ثم حاول مرة أخرى.':'You sent a request moments ago. Wait a minute and try again.'):(lang==='ar'?'تعذّر إرسال الطلب. تأكد من الاتصال بالإنترنت أو راسلنا على الواتساب.':'The request could not be sent. Check your connection or message us on WhatsApp.'))+'</span>';
+      ferr.hidden=false;
+    });
   });
+  if(window.NEXTPRO_CONVEX_URL){$('#sentMsg').innerHTML='<span data-l="ar">سنتواصل معك خلال 24 ساعة على الرقم الذي أدخلته.</span><span data-l="en">We will contact you within 24 hours on the number you entered.</span>'}
   $('#again').addEventListener('click',function(){
     form.reset();delete msg.dataset.auto;touched=false;$('#sent').hidden=true;$('#fgrid').hidden=false;$('#name').focus();
   });
@@ -1086,11 +1104,19 @@ html.adm-open{overflow:hidden}
       videos:[]
     };
   }
+  var CX=(window.NEXTPRO_CONVEX_URL||'').replace(/\/+$/,''),LIVE=!!CX,token=null;
+  try{token=sessionStorage.getItem('np_tok')}catch(e){}
+  function call(kind,path,args){
+    return fetch(CX+'/api/'+kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:path,args:args||{},format:'json'})})
+      .then(function(r){return r.json()})
+      .then(function(j){if(j&&j.status==='success')return j.value;throw new Error((j&&j.errorMessage)||'request_failed')});
+  }
   var state;
-  function load(){try{var s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return seed()}
+  function load(){if(LIVE)return {requests:[],videos:[]};try{var s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return seed()}
   var save=function(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}};
   state=load();
-  (function(){var ok=true;try{localStorage.setItem('np_t','1');localStorage.removeItem('np_t')}catch(e){ok=false}var w=document.getElementById('storeWarn');if(w)w.hidden=ok})();
+  if(LIVE){$('.demo').hidden=true;$('.demo-cred').hidden=true;$('#fillDemo').hidden=true;$('#login .hint').textContent='يدخل موظفو الإدارة المعتمدون فقط.'}
+  (function(){var ok=true;if(LIVE)return;try{localStorage.setItem('np_t','1');localStorage.removeItem('np_t')}catch(e){ok=false}var w=document.getElementById('storeWarn');if(w)w.hidden=ok})();
 
   var toastT;
   function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on')},2400)}
@@ -1113,13 +1139,41 @@ html.adm-open{overflow:hidden}
     });
   }
   var DEMO_EMAIL='admin@nextpro.in',DEMO_PASS='NextPro@2026';
+  function fail(err){
+    var m=String(err&&err.message||'');
+    if(/unauthorized/.test(m)){doLogout();$('#loginErr').textContent='انتهت الجلسة. سجّل الدخول من جديد.';return}
+    toast('تعذّر الاتصال بقاعدة البيانات. حاول مرة أخرى.');
+  }
+  function refresh(){
+    if(!LIVE)return Promise.resolve();
+    return Promise.all([call('query','admin:listRequests',{token:token}),call('query','admin:listVideos',{token:token})]).then(function(r){state.requests=r[0];state.videos=r[1];render();if(window.NP_renderVids)window.NP_renderVids()});
+  }
+  /* one place for every change: demo mode edits local data, live mode calls Convex then reloads the lists */
+  function act(demoFn,liveFn,okMsg){
+    if(!LIVE){demoFn();save();render();if(okMsg)toast(okMsg);return Promise.resolve(true)}
+    return liveFn().then(refresh).then(function(){if(okMsg)toast(okMsg);return true}).catch(function(e){fail(e);return false});
+  }
+  function doLogout(){
+    var t=token;token=null;try{sessionStorage.removeItem('np_tok')}catch(e){}
+    if(LIVE&&t)call('mutation','admin:logout',{token:t}).catch(function(){});
+    loggedIn=false;$('#pw').value='';state.requests=[];state.videos=[];showState();adm.scrollTop=0;focusMain();
+  }
   onSubmit($('#loginForm'),function(e){
     if(!$('#em').value.trim()||!$('#pw').value){$('#loginErr').textContent='أدخل البريد الإلكتروني وكلمة المرور.';(!$('#em').value.trim()?$('#em'):$('#pw')).focus();return}
+    if(LIVE){
+      var lb=$('#loginForm button[type=submit]');lb.disabled=true;lb.setAttribute('aria-busy','true');$('#loginErr').textContent='';
+      call('mutation','admin:login',{email:$('#em').value.trim(),password:$('#pw').value}).then(function(res){
+        if(!res.ok){$('#loginErr').textContent=res.error==='locked'?'قُفل الدخول مؤقتاً بعد محاولات خاطئة. حاول بعد 10 دقائق.':'البريد الإلكتروني أو كلمة المرور غير صحيحة.';$('#pw').select();return}
+        token=res.token;try{sessionStorage.setItem('np_tok',token)}catch(e){}
+        loggedIn=true;showState();return refresh().then(function(){adm.scrollTop=0;focusMain()});
+      }).catch(function(){$('#loginErr').textContent='تعذّر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.'}).then(function(){lb.disabled=false;lb.removeAttribute('aria-busy')});
+      return;
+    }
     if($('#em').value.trim().toLowerCase()!==DEMO_EMAIL||$('#pw').value!==DEMO_PASS){$('#loginErr').textContent='البريد الإلكتروني أو كلمة المرور غير صحيحة.';$('#pw').select();return}
     $('#loginErr').textContent='';loggedIn=true;showState();render();adm.scrollTop=0;focusMain();
   });
   $('#fillDemo').addEventListener('click',function(){$('#em').value=DEMO_EMAIL;$('#pw').value=DEMO_PASS;$('#loginErr').textContent='';$('#loginForm button[type=submit]').focus()});
-  $('#logout').addEventListener('click',function(){loggedIn=false;$('#pw').value='';showState();adm.scrollTop=0;focusMain()});
+  $('#logout').addEventListener('click',doLogout);
 
   /* open/close the dashboard inside this page (#admin) */
   var adm=$('#adm'),opener=null,SHELL='body>header,body>main,body>footer,body>.dock,body>.proto,body>.skip';
@@ -1128,7 +1182,9 @@ html.adm-open{overflow:hidden}
   function openAdm(){
     if(!adm.hidden)return;
     opener=document.activeElement;adm.hidden=false;document.documentElement.classList.add('adm-open');setInert(true);
+    if(LIVE&&token&&!loggedIn)loggedIn=true;
     showState();render();adm.scrollTop=0;focusMain();
+    if(LIVE&&loggedIn)refresh().catch(fail);
   }
   function closeAdm(){
     if(adm.hidden)return;
@@ -1186,7 +1242,8 @@ html.adm-open{overflow:hidden}
   $('#q').addEventListener('input',renderRows);
   $('#rows').addEventListener('change',function(e){
     var s=e.target.closest('[data-st]');if(!s)return;
-    var r=state.requests.filter(function(x){return x.id===s.dataset.st})[0];r.status=s.value;save();renderSeg();renderRows();toast('تم تحديث الحالة');
+    var r=state.requests.filter(function(x){return x.id===s.dataset.st})[0],val=s.value;
+    act(function(){r.status=val},function(){return call('mutation','admin:updateRequest',{token:token,id:r.id,status:val})},'تم تحديث الحالة');
   });
   $('#rows').addEventListener('click',function(e){var b=e.target.closest('[data-open]');if(b)openDetail(b.dataset.open)});
 
@@ -1210,7 +1267,8 @@ html.adm-open{overflow:hidden}
   $('#dclose').addEventListener('click',function(){dlg.close()});
   $('#dsave').addEventListener('click',function(e){
     e.preventDefault();
-    if(cur){cur.status=$('#dst').value;cur.notes=$('#dnotes').value;save();renderSeg();renderRows();toast('تم الحفظ')}
+    var c=cur,st=$('#dst').value,nt=$('#dnotes').value;
+    if(c)act(function(){c.status=st;c.notes=nt},function(){return call('mutation','admin:updateRequest',{token:token,id:c.id,status:st,notes:nt})},'تم الحفظ');
     dlg.close();
   });
   $('#dlgForm').addEventListener('submit',function(e){e.preventDefault()});
@@ -1260,30 +1318,45 @@ html.adm-open{overflow:hidden}
     if(!t){err.textContent='أدخل عنوان الفيديو بالعربي.';it.setAttribute('aria-invalid','true');it.focus();return}
     if(!id){err.textContent='الرابط غير صحيح. الصق رابط فيديو من يوتيوب.';iu.setAttribute('aria-invalid','true');iu.focus();return}
     err.textContent='';
-    state.videos.push({id:'v'+Date.now(),titleAr:t,titleEn:$('#vte').value.trim(),yt:id,published:$('#vp').checked});
-    save();$('#vform').reset();$('#vp').checked=true;renderVideos();toast(state.videos[state.videos.length-1].published?'تمت الإضافة، وهو يظهر الآن في قسم «من قاعاتنا» بالموقع':'تمت الإضافة (مخفي عن الموقع)');
+    var te=$('#vte').value.trim(),pub=$('#vp').checked;
+    act(function(){state.videos.push({id:'v'+Date.now(),titleAr:t,titleEn:te,yt:id,published:pub})},
+        function(){return call('mutation','admin:addVideo',{token:token,yt:id,titleAr:t,titleEn:te,published:pub})},
+        pub?'تمت الإضافة، وهو يظهر الآن في قسم «من قاعاتنا» بالموقع':'تمت الإضافة (مخفي عن الموقع)').then(function(ok){if(ok){$('#vform').reset();$('#vp').checked=true}});
   });
   var delT={};
   $('#vlist').addEventListener('click',function(e){
     var b=e.target.closest('[data-act]');if(!b)return;
     var item=b.closest('[data-vid]'),id=item.dataset.vid,i=state.videos.map(function(x){return x.id}).indexOf(id),a=b.dataset.act,v=state.videos;
+    var vid=v[i];if(!vid)return;
     if(a==='del'){
       if(!b.classList.contains('confirm')){b.classList.add('confirm');b.textContent='تأكيد الحذف';delT[id]=setTimeout(function(){b.classList.remove('confirm');b.textContent='حذف'},3000);return}
-      clearTimeout(delT[id]);v.splice(i,1);toast('تم حذف الفيديو');
-    }else if(a==='toggle'){v[i].published=!v[i].published;toast(v[i].published?'تم نشر الفيديو':'تم إخفاء الفيديو')}
-    else if(a==='up'&&i>0){var t=v[i-1];v[i-1]=v[i];v[i]=t}
-    else if(a==='down'&&i<v.length-1){var t2=v[i+1];v[i+1]=v[i];v[i]=t2}
-    save();renderVideos();
+      clearTimeout(delT[id]);
+      act(function(){v.splice(i,1)},function(){return call('mutation','admin:removeVideo',{token:token,id:id})},'تم حذف الفيديو');
+    }else if(a==='toggle'){
+      var np=!vid.published;
+      act(function(){vid.published=np},function(){return call('mutation','admin:setVideoPublished',{token:token,id:id,published:np})},np?'تم نشر الفيديو':'تم إخفاء الفيديو');
+    }else if(a==='up'&&i>0){
+      act(function(){var t=v[i-1];v[i-1]=v[i];v[i]=t},function(){return call('mutation','admin:moveVideo',{token:token,id:id,dir:-1})});
+    }else if(a==='down'&&i<v.length-1){
+      act(function(){var t2=v[i+1];v[i+1]=v[i];v[i]=t2},function(){return call('mutation','admin:moveVideo',{token:token,id:id,dir:1})});
+    }
   });
 
   function render(){renderSeg();renderRows();renderVideos()}
   /* shared with the public page: its form adds requests, its video section shows published videos */
   window.NPStore={
-    addRequest:function(r){state.requests.push({id:'r'+Date.now(),at:Date.now(),name:r.name,org:r.org,phone:r.phone,email:r.email,interest:r.interest,message:r.message,status:'new',notes:''});save();render()},
-    published:function(){return state.videos.filter(function(v){return v.published}).map(function(v){return {yt:v.yt,ar:v.titleAr,en:v.titleEn}})}
+    addRequest:function(r){
+      if(LIVE)return call('mutation','public:submitRequest',r);
+      state.requests.push({id:'r'+Date.now(),at:Date.now(),name:r.name,org:r.org,phone:r.phone,email:r.email,interest:r.interest,message:r.message,status:'new',notes:''});save();render();return Promise.resolve();
+    },
+    published:function(){
+      if(LIVE)return call('query','public:publishedVideos',{});
+      return state.videos.filter(function(v){return v.published}).map(function(v){return {yt:v.yt,ar:v.titleAr,en:v.titleEn}});
+    }
   };
   var _save=save;save=function(){_save();if(window.NP_renderVids)window.NP_renderVids()};
   render();sync();
+  if(window.NP_renderVids)window.NP_renderVids(); /* show published videos on the public page after every load */
 })();
 </script>
 </body>
